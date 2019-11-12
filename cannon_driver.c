@@ -9,37 +9,34 @@
 #include <linux/init.h>
 #include <linux/slab.h>
 
+#define CANNON_VENDOR_ID 0x2123
+#define CANNON_PRODUCT_ID 0x1010
+
+#define DEFAULT_CONTROL_ENDPOINT 0
+
+#define CONTROL_REQUEST 0x09
+#define CONTROL_REQUEST_TYPE 0x21
+
 MODULE_LICENSE("Dual BSD/GPL");
 
 static int cannon_probe(struct usb_interface *interface, const struct usb_device_id *id)
 {
-	int i = 0;
-	struct usb_host_interface *iface_desc;
-	//try command
 	struct usb_device * dev; 
 	unsigned int endpoint;
-	int commandSize = 8; 
-	printk(KERN_ALERT "Ben here: My cannon has been plugged in");
-	dev = interface_to_usbdev(interface);
-	iface_desc = interface->cur_altsetting;
-	
-	//register dev
-	//int res1 = usb_register_dev(interface, dev);
-	//if (res1) { printk(KERN_ALERT "Failed to register dev");  }
-
-	endpoint = usb_sndctrlpipe(dev, 0); //what is the endpoint number?
-	usb_clear_halt(dev, endpoint);
-	void * command = kmalloc(commandSize, GFP_KERNEL);
+	void * command;
+	int res;
 	unsigned char commandStr[8] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; 
+	int commandSize = 8; 
+	dev = interface_to_usbdev(interface);
+	endpoint = usb_sndctrlpipe(dev, DEFAULT_CONTROL_ENDPOINT);
+	command = kmalloc(commandSize, GFP_KERNEL);
 	memcpy(command, commandStr, commandSize);
-	printk(KERN_ALERT "Ben here: about to send control message");
-	int res = usb_control_msg(dev, endpoint,
-					 0x09, //request
-				         0x21, //request type
-					 0x00, 0x00, command, commandSize, 0);
+	res = usb_control_msg(dev, endpoint, CONTROL_REQUEST, CONTROL_REQUEST_TYPE, 0x00, 0x00, command, commandSize, 0);
 	if (res < 0) {
 		printk(KERN_ALERT "Ben here: failed to send control message with error %d", res);
 	}
+	kfree(command);
+	printk(KERN_ALERT "Ben here: My cannon has been plugged in");
 	return 0;
 }
 
@@ -48,7 +45,7 @@ static void cannon_disconnect(struct usb_interface *interface) {
 }
 
 static struct usb_device_id cannon_table[] = {
-        { USB_DEVICE(0x2123, 0x1010) },
+        { USB_DEVICE(CANNON_VENDOR_ID, CANNON_PRODUCT_ID) },
         {}
 };
 
