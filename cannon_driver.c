@@ -1,11 +1,13 @@
-//Commands:
+//Commands to get to work:
 //make -C /lib/modules/$(uname -r)/build M=`pwd` modules
+//sudo rmmod usbhid
 //sudo insmod cannon_driver.ko
 
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/usb.h>
 #include <linux/init.h>
+#include <linux/slab.h>
 
 MODULE_LICENSE("Dual BSD/GPL");
 
