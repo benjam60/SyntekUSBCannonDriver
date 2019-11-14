@@ -26,6 +26,7 @@ struct cannon_info {
 };
 
 static struct usb_driver cannon_driver;
+static struct usb_class_driver cannon_class;
 
 static void move_up(struct usb_device *dev, struct usb_interface *interface) {
 	unsigned int endpoint;
@@ -53,11 +54,14 @@ static int cannon_probe(struct usb_interface *interface, const struct usb_device
 	cannon_device_info->dev = usb_get_dev(interface_to_usbdev(interface));
 	cannon_device_info->interface = interface;
 	usb_set_intfdata(interface, cannon_device_info->dev);
+	usb_register_dev(interface, &cannon_class);
+	dev_info(&interface->dev, "Device attached to %d", interface->minor);
 	printk(KERN_ALERT "Ben here: My cannon has been plugged in");
 	return 0;
 }
 
 static void cannon_disconnect(struct usb_interface *interface) {
+	usb_deregister_dev(interface, &cannon_class);
 	printk(KERN_ALERT "Ben here: Removed cannon from the computer");
 }
 
@@ -111,13 +115,11 @@ static struct usb_driver cannon_driver =
         .probe = cannon_probe,
         .disconnect = cannon_disconnect,
 };
-
 static struct usb_class_driver cannon_class = {
 	.name = "usb/cannon",
 	.fops = &cannon_fops,
-	.minor_base = 192 //NOTE MIGHT BE WRONG AND NEED TO GET MINOR RANGE! 
+	.minor_base = 192, //NOTE MIGHT BE WRONG AND NEED TO GET MINOR RANGE! 
 };
-
 
 static int __init cannon_init(void) {
         int result;
