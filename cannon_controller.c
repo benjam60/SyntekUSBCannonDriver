@@ -2,6 +2,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <stdio.h>
+
+//add debugging code to driver -seems to be issue with fops
+//maybe no open or close method for fops!
+//THERES A NULL POINTER ERROR
 void main(void) {
 	int fd;
 	int ret;

@@ -80,6 +80,7 @@ static int cannon_open(struct inode *inode, struct file *file) {
 	interface = usb_find_interface(&cannon_driver, minorNum);
 	cannon_device_info= usb_get_intfdata(interface);
 	file->private_data = cannon_device_info;
+	printk(KERN_ALERT "cannon driver is opened");
 	return 0;
 }
 
@@ -87,11 +88,14 @@ static ssize_t cannon_write(struct file *file, const char __user *user_buffer, s
 	struct cannon_info *cannon_device_info;
 	int max_input_size = 4;
 	char * buffer = NULL;
-
+	printk(KERN_ALERT "CANNON WRITE STEP 1");
 	cannon_device_info = (struct cannon_info *) file->private_data;
-	buffer = kmalloc(GFP_KERNEL, max_input_size);
-	copy_from_user(buffer, user_buffer, max_input_size);
-	if (strcmp(buffer, "up")) {
+	printk(KERN_ALERT "CANNON WRITE STEP 2");
+	buffer = kmalloc(max_input_size, GFP_KERNEL);
+	if (copy_from_user(buffer, user_buffer, max_input_size) < 0) {
+		printk(KERN_ALERT "failed to copy from user");
+	}
+	if (strcmp(buffer, "up") == 0) {
 		move_up(cannon_device_info->dev, cannon_device_info->interface);
 	}
 	else {
