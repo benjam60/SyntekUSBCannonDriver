@@ -63,7 +63,7 @@ static int cannon_probe(struct usb_interface *interface, const struct usb_device
 
 	cannon_device_info->dev = usb_get_dev(interface_to_usbdev(interface));
 	cannon_device_info->interface = interface;
-	usb_set_intfdata(interface, cannon_device_info->dev);
+	usb_set_intfdata(interface, cannon_device_info);
 	
 	retval = usb_register_dev(interface, &cannon_class);
 	if (retval) {
