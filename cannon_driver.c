@@ -89,7 +89,7 @@ static int cannon_open(struct inode *inode, struct file *file) {
 
 static ssize_t cannon_write(struct file *file, const char __user *user_buffer, size_t count, loff_t *ppos) {
 	struct cannon_info *cannon_device_info;
-	char buffer[5];
+	char buffer[6];
 	unsigned char down = 0x01;
 	unsigned char left = 0x04;
 	unsigned char right = 0x08;
@@ -97,11 +97,9 @@ static ssize_t cannon_write(struct file *file, const char __user *user_buffer, s
         unsigned char up = 0x02;
 	unsigned char fire = 0x10;	
 	cannon_device_info = (struct cannon_info *) file->private_data;
-	printk(KERN_ALERT "we reach here");
 	if (copy_from_user(buffer, user_buffer, count)) {
 		printk(KERN_ALERT "Failed to copy data from user");
 	}
-	printk(KERN_ALERT "do we reach here");
 	if (strcmp(buffer, "up") == 0) {
 		send_control_command(cannon_device_info, up);
 	}
@@ -180,18 +178,14 @@ module_exit(cannon_exit);
 static void send_control_command(struct cannon_info *cannon_info, unsigned char command) {
 	int res;
 	unsigned int endpoint = usb_sndctrlpipe(cannon_info->dev, DEFAULT_CONTROL_ENDPOINT);
-	printk(KERN_ALERT "fail 1");
 	unsigned char *usbCommand = createUSBCommand(cannon_info->dev, command);
-	printk(KERN_ALERT "fail 2");
 	res = usb_control_msg(cannon_info->dev, endpoint, CONTROL_REQUEST, CONTROL_REQUEST_TYPE,
 		       	0x00, 0x00, usbCommand, 8, 0);
-	printk(KERN_ALERT "fail 3");
 	if (res < 0) {
 		printk(KERN_ALERT "Failed to send up command control message with error %d", res);
 	}
 
 	kfree(usbCommand);
-	printk(KERN_ALERT "fail 4");
 }
 
 static unsigned char * createUSBCommand(struct usb_device * dev, unsigned char command) {
