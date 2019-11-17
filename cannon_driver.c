@@ -66,9 +66,9 @@ static int cannon_probe(struct usb_interface *interface, const struct usb_device
 	usb_set_intfdata(interface, cannon_device_info->dev);
 	
 	retval = usb_register_dev(interface, &cannon_class);
-	if (!retval) {
-		printk(KERN_ALERT "failed to register device");
-		return 1;
+	if (retval) {
+		printk(KERN_ALERT "failed to register device with error code %d", retval);
+		return retval;
 	}
 	dev_info(&interface->dev, "Device attached to %d", interface->minor);
 	printk(KERN_ALERT "Ben here: My cannon has been plugged in");
@@ -77,7 +77,6 @@ static int cannon_probe(struct usb_interface *interface, const struct usb_device
 
 static void cannon_disconnect(struct usb_interface *interface) {
 	struct cannon_info * dev;
-	int minor = interface->minor;
 	
 	dev = usb_get_intfdata(interface);
 	usb_set_intfdata(interface, NULL);
