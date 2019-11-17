@@ -28,7 +28,7 @@ struct cannon_info {
 static struct usb_driver cannon_driver;
 static struct usb_class_driver cannon_class;
 
-static void move_up(struct usb_device *dev, struct usb_interface *interface);
+static void move_up(struct cannon_info*);
 
 static int __init cannon_init(void) {
 	int register_result;
@@ -95,24 +95,7 @@ static ssize_t cannon_write(struct file *file, const char __user *user_buffer, s
 		printk(KERN_ALERT "Failed to copy data from user");
 	}
 	if (strcmp(buffer, "up") == 0) {
-		move_up(cannon_device_info->dev, cannon_device_info->interface);
-
-		/*unsigned int endpoint;
-		void * command;
-		int res;
-	unsigned char commandStr[8] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; 
-	int commandSize = 8;
-	endpoint = usb_sndctrlpipe(cannon_device_info->dev, DEFAULT_CONTROL_ENDPOINT);
-	command = kmalloc(commandSize, GFP_KERNEL);
-	memcpy(command, commandStr, commandSize);
-	res = usb_control_msg(cannon_device_info->dev, endpoint, CONTROL_REQUEST, CONTROL_REQUEST_TYPE, 0x00, 0x00, command, commandSize, 0);
-	printk(KERN_ALERT "CANNON WRITE STEP 5");
-	if (res < 0) {
-		printk(KERN_ALERT "Ben here: failed to send control message with error %d", res);
-	}
-	kfree(command);
-*/
-		//move_up(cannon_device_info->dev, cannon_device_info->interface);
+		move_up(cannon_device_info);
 	}
 	kfree(buffer);
 	return 1;
@@ -167,17 +150,16 @@ MODULE_DEVICE_TABLE(usb, cannon_table);
 module_init(cannon_init);
 module_exit(cannon_exit);
 
-
-static void move_up(struct usb_device *dev, struct usb_interface *interface) {
+static void move_up(struct cannon_info *cannon_info) {
 	unsigned int endpoint;
 	void * command;
 	int res;
 	unsigned char commandStr[8] = {0x02, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 }; 
 	int commandSize = 8;
-	endpoint = usb_sndctrlpipe(dev, DEFAULT_CONTROL_ENDPOINT);
+	endpoint = usb_sndctrlpipe(cannon_info->dev, DEFAULT_CONTROL_ENDPOINT);
 	command = kmalloc(commandSize, GFP_KERNEL);
 	memcpy(command, commandStr, commandSize);
-	res = usb_control_msg(dev, endpoint, CONTROL_REQUEST, CONTROL_REQUEST_TYPE, 0x00, 0x00, command, commandSize, 0);
+	res = usb_control_msg(cannon_info->dev, endpoint, CONTROL_REQUEST, CONTROL_REQUEST_TYPE, 0x00, 0x00, command, commandSize, 0);
 	if (res < 0) {
 		printk(KERN_ALERT "Ben here: failed to send control message with error %d", res);
 	}
