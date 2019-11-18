@@ -14,12 +14,28 @@
 
 #define CONTROL_REQUEST 0x09
 #define CONTROL_REQUEST_TYPE 0x21
+#define USB_COMMAND_SIZE 8
 
 MODULE_LICENSE("Dual BSD/GPL");
 
 struct cannon_info {
 	struct usb_device * dev;
 	struct usb_interface * interface;
+};
+
+struct entry { 
+	char * commandFromUser;
+	unsigned char usbCommand;
+};
+
+struct entry command_mapping[] = { 
+		"down", 0x01,
+		"left", 0x04,
+		"right", 0x08,
+		"stop", 0x20,
+		"up", 0x02,
+		"fire", 0x010,
+		 NULL, 0 
 };
 
 static struct usb_driver cannon_driver;
@@ -83,39 +99,26 @@ static int cannon_open(struct inode *inode, struct file *file) {
 	return 0;
 }
 
-struct entry { 
-	char * commandFromUser;
-	unsigned char usbCommand;
-};
-
 static ssize_t cannon_write(struct file *file, const char __user *user_buffer, size_t count, loff_t *ppos) {
 	struct cannon_info *cannon_device_info;
-	char buffer[6];
-	struct entry mapping[] = { 
-		"down", 0x01,
-		"left", 0x04,
-		"right", 0x08,
-		"stop", 0x20,
-		"up", 0x02,
-		"fire", 0x010,
-		 NULL, 0 
-	};
+	const int max_user_command_size = 6;
+	char buffer[max_user_command_size];
 	int i = 0;
 	char *nextEntry = NULL;
+	int bytesToRead = count <= max_user_command_size ? count : max_user_command_size;
 	cannon_device_info = (struct cannon_info *) file->private_data;
-	if (copy_from_user(buffer, user_buffer, count)) {
+	if (copy_from_user(buffer, user_buffer, bytesToRead)) {
 		printk(KERN_ALERT "Failed to copy data from user");
 	}
-	nextEntry = mapping[i].commandFromUser;
+	nextEntry = command_mapping[i].commandFromUser;
 	while (nextEntry) {
-		if (strcmp(buffer, mapping[i].commandFromUser) == 0) {
-			send_control_command(cannon_device_info, mapping[i].usbCommand);
+		if (strcmp(buffer, command_mapping[i].commandFromUser) == 0) {
+			send_control_command(cannon_device_info, command_mapping[i].usbCommand);
 			return 1;
 		}
-		else { nextEntry = mapping[++i].commandFromUser; }
+		else { nextEntry = command_mapping[++i].commandFromUser; }
 	}
 	printk(KERN_ALERT "%s is an undefined command for cannon", buffer);
-	kfree(buffer);
 	return -1;
 
 }
@@ -173,20 +176,18 @@ static void send_control_command(struct cannon_info *cannon_info, unsigned char 
 	unsigned int endpoint = usb_sndctrlpipe(cannon_info->dev, DEFAULT_CONTROL_ENDPOINT);
 	unsigned char *usbCommand = createUSBCommand(cannon_info->dev, command);
 	res = usb_control_msg(cannon_info->dev, endpoint, CONTROL_REQUEST, CONTROL_REQUEST_TYPE,
-		       	0x00, 0x00, usbCommand, 8, 0);
+		       	0x00, 0x00, usbCommand, USB_COMMAND_SIZE, 0);
 	if (res < 0) {
 		printk(KERN_ALERT "Failed to send up command control message with error %d", res);
 	}
-
 	kfree(usbCommand);
 }
 
 static unsigned char * createUSBCommand(struct usb_device * dev, unsigned char command) {
 	unsigned char * usbCommand = NULL;
-	int commandSize = 8;
-	unsigned char commandStr[8] = {0x02, command, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
-	usbCommand = kmalloc(commandSize, GFP_KERNEL);
-	memcpy(usbCommand, commandStr, commandSize);
+	unsigned char commandStr[USB_COMMAND_SIZE] = {0x02, command, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
+	usbCommand = kmalloc(USB_COMMAND_SIZE, GFP_KERNEL);
+	memcpy(usbCommand, commandStr, USB_COMMAND_SIZE);
 	return usbCommand; 
 }
 
