@@ -1,7 +1,4 @@
-//Commands to get to work:
-//make -C /lib/modules/$(uname -r)/build M=`pwd` modules
-//sudo rmmod usbhid
-//sudo insmod cannon_driver.ko
+//Written By: Benjamin Erichsen
 
 #include <linux/module.h>
 #include <linux/kernel.h>
@@ -49,7 +46,7 @@ static int cannon_probe(struct usb_interface *interface, const struct usb_device
 	cannon_device_info = kzalloc(sizeof(struct cannon_info), GFP_KERNEL);
 	if (!cannon_device_info) {
 		printk(KERN_ALERT "Kernel is out of memory");
-		return 1;
+		return -1;
 	}
 
 	cannon_device_info->dev = usb_get_dev(interface_to_usbdev(interface));
@@ -74,56 +71,52 @@ static int cannon_open(struct inode *inode, struct file *file) {
 	interface = usb_find_interface(&cannon_driver, minorNum);
 	if (!interface) {
 		printk(KERN_ALERT "Could not find interface for minor number");
-		return 1;	
+		return -1;	
 	}
 	cannon_device_info = usb_get_intfdata(interface);
 	if (!cannon_device_info) {
 		printk(KERN_ALERT "Could not get cannon device info");
-		return 1;
+		return -1;
 	}
 	file->private_data = cannon_device_info;
 	printk(KERN_ALERT "Opened cannon device");
 	return 0;
 }
 
+struct entry { 
+	char * commandFromUser;
+	unsigned char usbCommand;
+};
 
 static ssize_t cannon_write(struct file *file, const char __user *user_buffer, size_t count, loff_t *ppos) {
 	struct cannon_info *cannon_device_info;
 	char buffer[6];
-	unsigned char down = 0x01;
-	unsigned char left = 0x04;
-	unsigned char right = 0x08;
-        unsigned char stop = 0x20;
-        unsigned char up = 0x02;
-	unsigned char fire = 0x10;	
+	struct entry mapping[] = { 
+		"down", 0x01,
+		"left", 0x04,
+		"right", 0x08,
+		"stop", 0x20,
+		"up", 0x02,
+		"fire", 0x010,
+		 NULL, 0 
+	};
+	int i = 0;
+	char *nextEntry = NULL;
 	cannon_device_info = (struct cannon_info *) file->private_data;
 	if (copy_from_user(buffer, user_buffer, count)) {
 		printk(KERN_ALERT "Failed to copy data from user");
 	}
-	if (strcmp(buffer, "up") == 0) {
-		send_control_command(cannon_device_info, up);
+	nextEntry = mapping[i].commandFromUser;
+	while (nextEntry) {
+		if (strcmp(buffer, mapping[i].commandFromUser) == 0) {
+			send_control_command(cannon_device_info, mapping[i].usbCommand);
+			return 1;
+		}
+		else { nextEntry = mapping[++i].commandFromUser; }
 	}
-	else if (strcmp(buffer, "down") == 0) {
-		send_control_command(cannon_device_info, down);
-	}
-	else if (strcmp(buffer, "stop") == 0) {
-		send_control_command(cannon_device_info, stop);
-	}
-	else if (strcmp(buffer, "left") == 0) {
-		send_control_command(cannon_device_info, left);
-	}
-	else if (strcmp(buffer, "right") == 0) {
-		send_control_command(cannon_device_info, right);
-	}
-	else if (strcmp(buffer, "fire") == 0) {
-		send_control_command(cannon_device_info, fire);
-	}
-	else {
-		printk(KERN_ALERT "%s is an undefined command for cannon", buffer);
-		kfree(buffer);
-		return -1;
-	}
-	return 1;
+	printk(KERN_ALERT "%s is an undefined command for cannon", buffer);
+	kfree(buffer);
+	return -1;
 
 }
 
